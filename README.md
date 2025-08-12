@@ -1,1 +1,1 @@
-# CIFAR-10-Contrastive-Learning
+# CIFAR-10-Classification
