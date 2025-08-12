@@ -77,7 +77,7 @@ def main():
         train_loss= cl_train(model, train_loader, criterion, optimizer, scheduler, device, epoch, args.lf)
         cl_epoch_log(train_loss, epoch, args.epochs)
 
-    torch.save(model.module.backbone.load_state_dict(), model_path)
+    torch.save(model.module.backbone.state_dict(), model_path)
     artifact = wandb.Artifact('model', type='model')
     artifact.add_file(model_path)
     wandb.log_artifact(artifact)
