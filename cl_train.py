@@ -59,9 +59,9 @@ def main():
     model = CNN(out_dim=args.proj_dim, batch_norm=args.bn, dropouts=args.dropouts).to(device)
     model = nn.DataParallel(model)
 
-    if not os.path.exists('./models'):
-        os.makedirs('./models')
-    model_path = f'./models/backbone.pth'
+    if not os.path.exists('./ckpts'):
+        os.makedirs('./ckpts')
+    backbone_path = './ckpts/backbone.pth'
     
     # train
     criterion = ContrastiveLoss(mode=args.mode, temperature=args.temp)
@@ -77,9 +77,17 @@ def main():
         train_loss= cl_train(model, train_loader, criterion, optimizer, scheduler, device, epoch, args.lf)
         cl_epoch_log(train_loss, epoch, args.epochs)
 
-    torch.save(model.module.backbone.state_dict(), model_path)
-    artifact = wandb.Artifact('model', type='model')
-    artifact.add_file(model_path)
+    torch.save({
+        'epoch': args.epochs,
+        'projection_dim': args.proj_dim,
+        'batch_norm': args.bn,
+        'dropouts': args.dropouts,
+        'backbone_state_dict': model.module.backbone.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict()
+    }, backbone_path)
+    artifact = wandb.Artifact('ckpt', type='ckpt')
+    artifact.add_file(backbone_path)
     wandb.log_artifact(artifact)
 
     wandb.finish()

@@ -3,9 +3,9 @@ import tqdm
 import wandb
 
 class EarlyStopper:
-    def __init__(self, model, model_path, patience, min_delta):
+    def __init__(self, model, model_ckpt, patience, min_delta):
         self.model = model
-        self.model_path = model_path
+        self.model_ckpt = model_ckpt
         self.patience = patience
         self.min_delta = min_delta
         
@@ -14,8 +14,8 @@ class EarlyStopper:
 
     def early_stop(self, val_loss):
         if val_loss < self.min_val_loss:
-            print(f'best val_loss {val_loss:.4f}, save model!')
-            torch.save(self.model.module.state_dict(), self.model_path)
+            print(f'best val_loss {val_loss:.4f}')
+            self.model_ckpt['model_state_dict'] = self.model.module.state_dict()
 
             self.min_val_loss = val_loss
             self.counter = 0
@@ -160,3 +160,36 @@ def cl_epoch_log(train_loss, epoch, epochs):
         "train/epoch_loss": train_loss,
         "epoch": epoch
     })
+
+def hcl_train(model, loader, criterion, optimizer, scheduler, device, epoch, log_freq):
+    model.train()
+    
+    total_loss = 0
+    total = 0
+
+    for step, (images, labels) in enumerate(tqdm.tqdm(loader, desc=f"Train epoch {epoch}")):
+        images = images.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+
+        hcl_batch_size, hard_negative_batch_size, C, H, W = images.shape
+        images = images.view(-1, C, H, W)
+        projections = model(images)
+        projections = projections.view(hcl_batch_size, hard_negative_batch_size, -1)
+        loss = criterion(projections, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item() * hcl_batch_size
+        total += hcl_batch_size
+
+        if step % log_freq == 0:
+            wandb.log({
+                "train/loss": loss.item(),
+                "train/lr": optimizer.param_groups[0]['lr'],
+            })
+
+    scheduler.step()
+
+    loss = total_loss / total
+    return loss

@@ -57,16 +57,31 @@ def main():
     val_loader = DataLoader(val_set, batch_size=args.bs, shuffle=False, num_workers=args.workers, pin_memory=True)
     
     # model
-    model = CNN(out_dim=len(classes), batch_norm=args.bn, dropouts=args.dropouts).to(device)
-    if args.backbone_path and os.path.exists(args.backbone_path):
-        model.backbone.load_state_dict(torch.load(args.backbone_path, map_location=device, weights_only=True))
-    elif args.backbone_path:
-        raise FileNotFoundError(f"Backbone path {args.backbone_path} does not exist!")
+    model_ckpt = {
+        'batch_norm': None,
+        'dropouts': None,
+        'model_state_dict': None
+    }
+    if args.backbone_path:
+        if os.path.exists(args.backbone_path):
+            backbone_ckpt = torch.load(args.backbone_path, map_location=device, weights_only=True)
+            model = CNN(out_dim=len(classes), batch_norm=backbone_ckpt['batch_norm'], dropouts=backbone_ckpt['dropouts']).to(device)
+            model.backbone.load_state_dict(backbone_ckpt['backbone_state_dict'])
+
+            model_ckpt['batch_norm'] = backbone_ckpt['batch_norm']
+            model_ckpt['dropouts'] = backbone_ckpt['dropouts']
+        else:
+            raise FileNotFoundError(f"Backbone path {args.backbone_path} does not exist")
+    else:
+        model = CNN(out_dim=len(classes), batch_norm=args.bn, dropouts=args.dropouts).to(device)
+
+        model_ckpt['batch_norm'] = args.bn
+        model_ckpt['dropouts'] = args.dropouts
     model = nn.DataParallel(model)
 
-    if not os.path.exists('./models'):
-        os.makedirs('./models')
-    model_path = f'./models/model.pth'
+    if not os.path.exists('./ckpts'):
+        os.makedirs('./ckpts')
+    model_path = f'./ckpts/model.pth'
     
     # train
     criterion = nn.CrossEntropyLoss()
@@ -77,7 +92,7 @@ def main():
     else:
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-5)
-    early_stopper = EarlyStopper(model, model_path, patience=5, min_delta=0.3)
+    early_stopper = EarlyStopper(model, model_ckpt, patience=5, min_delta=0.3)
 
     wandb.login()
     wandb.init(project='CIFAR-10-Classification')
@@ -90,15 +105,16 @@ def main():
         sl_epoch_log(train_loss, train_acc, val_loss, val_acc, epoch, args.epochs)
 
         if early_stopper.early_stop(val_loss):
-            print(f'Early stop at epoch {epoch}!')
+            print(f'Training early stopped at epoch {epoch}')
             break
-
-    artifact = wandb.Artifact('model', type='model')
+    
+    torch.save(model_ckpt, model_path)
+    artifact = wandb.Artifact('ckpt', type='ckpt')
     artifact.add_file(model_path)
     wandb.log_artifact(artifact)
 
     wandb.finish()
-    print('Finished!')
+    print('Traing finished')
 
 if __name__ == '__main__':
     main()

@@ -18,8 +18,6 @@ def arg_parse():
     parser.add_argument('--bs', type=int, default=1024, help='batch size')
     parser.add_argument('--workers', type=int, default=4, help='number of workers')
 
-    parser.add_argument('--bn', type=bool, default=True, help='batch norm')
-    parser.add_argument('--dropouts', nargs='+', type=float, default=[.1, .2, .3, .5])
     parser.add_argument('--model-path', type=str, required=True)
 
     return parser.parse_args()
@@ -41,11 +39,11 @@ def main():
     loader = DataLoader(test_set, batch_size=args.bs, shuffle=False, num_workers=args.workers, pin_memory=True)
 
     # model
-    model = CNN(out_dim=len(classes), batch_norm=args.bn, dropouts=args.dropouts).to(device)
-
     if not os.path.exists(args.model_path):
-        raise FileNotFoundError(f"Model path {args.model_path} does not exist!")
-    model.load_state_dict(torch.load(args.model_path, map_location=device, weights_only=True))
+        raise FileNotFoundError(f"Model path {args.model_path} does not exist")
+    ckpt = torch.load(args.model_path, map_location=device, weights_only=True)
+    model = CNN(out_dim=len(classes), batch_norm=ckpt['batch_norm'], dropouts=ckpt['dropouts']).to(device)
+    model.load_state_dict(ckpt['model_state_dict'])
     
     # test
     criterion = nn.CrossEntropyLoss()
