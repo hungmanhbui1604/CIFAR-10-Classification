@@ -24,12 +24,13 @@ def parse_args():
 
     parser.add_argument('--model-path', type=str, required=True)
     parser.add_argument('--backbone-path', type=str, required=True)
+    parser.add_argument('--backbone-filename', type=str, default='backbone.pth')
 
     parser.add_argument('--mode', type=str, default='scl', choices=['scl', 'simclr'], help='mode of contrastive loss')
     parser.add_argument('--temp', type=float, default=0.1, help='temperature of contrastive loss')
-    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
-    parser.add_argument('--epochs', type=int, default=1000, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs')
 
     parser.add_argument('--lf', type=int, default=10, help='log frequency')
 
@@ -100,7 +101,7 @@ def main():
 
     if not os.path.exists('./ckpts'):
         os.makedirs('./ckpts')
-    backbone_path = './ckpts/backbone.pth'
+    backbone_path = './ckpts/' + args.backbone_filename
 
     # train
     criterion = HardNegativeContrastiveLoss(mode=args.mode, temperature=args.temp)
@@ -130,7 +131,7 @@ def main():
     wandb.log_artifact(artifact)
 
     wandb.finish()
-    print('Finished!')
+    print('Traing finished')
 
 if __name__ == '__main__':
     main()

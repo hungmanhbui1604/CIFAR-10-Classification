@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--bn', type=bool, default=True, help='batch norm')
     parser.add_argument('--dropouts', nargs='+', type=float, default=[.1, .2, .3, .5])
     parser.add_argument('--backbone-path', type=str, default='')
+    parser.add_argument('--model-filename', type=str, default='model.pth')
 
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
@@ -81,7 +82,7 @@ def main():
 
     if not os.path.exists('./ckpts'):
         os.makedirs('./ckpts')
-    model_path = f'./ckpts/model.pth'
+    model_path = './ckpts/' + args.model_filename
     
     # train
     criterion = nn.CrossEntropyLoss()

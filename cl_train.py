@@ -22,12 +22,13 @@ def parse_args():
     parser.add_argument('--proj-dim', type=int, default=128, help='dimension of projection')
     parser.add_argument('--bn', type=bool, default=True, help='batch norm')
     parser.add_argument('--dropouts', nargs='+', type=float, default=[.1, .2, .3, .5])
+    parser.add_argument('--backbone-filename', type=str, default='backbone.pth')
 
     parser.add_argument('--mode', type=str, default='scl', choices=['scl', 'simclr'], help='mode of contrastive loss')
     parser.add_argument('--temp', type=float, default=0.1, help='temperature of contrastive loss')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-4, help='weight decay')
-    parser.add_argument('--epochs', type=int, default=1000, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=1200, help='number of epochs')
 
     parser.add_argument('--lf', type=int, default=10, help='log frequency')
 
@@ -61,7 +62,7 @@ def main():
 
     if not os.path.exists('./ckpts'):
         os.makedirs('./ckpts')
-    backbone_path = './ckpts/backbone.pth'
+    backbone_path = './ckpts/' + args.backbone_filename
     
     # train
     criterion = ContrastiveLoss(mode=args.mode, temperature=args.temp)
@@ -91,7 +92,7 @@ def main():
     wandb.log_artifact(artifact)
 
     wandb.finish()
-    print('Finished!')
+    print('Traing finished')
 
 if __name__ == '__main__':
     main()

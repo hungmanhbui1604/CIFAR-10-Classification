@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset, random_split
 import tqdm
+import os
     
 def data_split(dataset, ratio):
     size0 = int(ratio * len(dataset))
@@ -118,3 +119,21 @@ class HardNegativeContrastiveDataset(Dataset):
         x = torch.cat([positive_images, hard_negative_images, random_images], dim=0)
         y = torch.cat([positive_labels, hard_negative_labels, random_labels], dim=0)
         return x, y
+
+def save_misclassified(misclassified, save_dir):
+    os.makedirs(save_dir, exist_ok=True)
+    
+    classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    
+    for pred_label, images_true_labels in misclassified.items():
+        dir_name = f"{classes[pred_label]}"
+        dir_path = os.path.join(save_dir, dir_name)
+        os.makedirs(dir_path, exist_ok=True)
+        
+        count = 0
+        for image, true_label in images_true_labels:
+            image_path = os.path.join(dir_path, f"{classes[true_label]}_{count}.png")
+            image.save(image_path)
+            count += 1
+            
+        print(f"Saved {count} images to {dir_path}")
